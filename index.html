@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Rocket Architect 3D - AAA Multiverse Aerospace Simulator</title>
+    <meta name="description" content="Build, launch, and fly custom rockets through the entire solar system with AAA-quality 3D graphics, real physics, and gravity assists.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./src/style.css">
+</head>
+<body>
+    <!-- Three.js 3D Viewport -->
+    <div id="canvas-container"></div>
+
+    <!-- Top UI Container (Header & HUD) -->
+    <div class="top-ui-container">
+        <!-- Top Header Bar -->
+        <div class="header">
+            <h1 class="app-title">🚀 ROCKET ARCHITECT</h1>
+            <div class="header-stats">
+                <span class="credits">💳 $<span id="val-credits">150,000</span></span>
+                <button id="btn-sound" class="btn-small">🔊 ON</button>
+                <button id="btn-admin-access" class="btn-small btn-admin-trigger">🔑 ADMIN</button>
+                <button id="btn-open-menu" class="btn-small btn-menu-trigger">🛠️ MENU</button>
+            </div>
+        </div>
+
+        <!-- Floating Top Flight Telemetry Strip (100% Non-blocking) -->
+        <div class="flight-hud-strip">
+            <div class="hud-item"><span class="hud-label">STATUS</span><span class="hud-val badge-status" id="badge-status">PAD</span></div>
+            <div class="hud-item"><span class="hud-label">ALT</span><span class="hud-val"><span id="val-altitude">0</span>m</span></div>
+            <div class="hud-item"><span class="hud-label">VEL</span><span class="hud-val"><span id="val-velocity">0.0</span>m/s</span></div>
+            <div class="hud-item hud-fuel"><span class="hud-label">FUEL</span><div class="fuel-track"><div id="bar-fuel" class="fuel-fill" style="width:100%"></div></div></div>
+        </div>
+    </div>
+
+    <!-- Bottom Control Toolbar (Clean 3D Launch view) -->
+    <div class="bottom-toolbar">
+        <div class="throttle-control">
+            <span class="label"><span>THROTTLE</span> <span><span id="val-throttle">100</span>%</span></span>
+            <input type="range" id="slider-throttle" min="0" max="100" value="100">
+        </div>
+        <div class="time-warp">
+            <button class="warp-btn active" data-warp="1">1x</button>
+        </div>
+        <div class="launch-control">
+            <button id="btn-reset" class="btn-secondary">RESET</button>
+            <button id="btn-open-build" class="btn-secondary">🛠️ BUILD</button>
+            <button id="btn-launch" class="btn-primary launch-btn">🔥 LAUNCH</button>
+        </div>
+    </div>
+
+    <!-- FULL-SCREEN SLIDE-UP DRAWER OVERLAY (#mobile-drawer-overlay) -->
+    <div id="mobile-drawer-overlay" class="drawer-overlay hidden">
+        <div class="drawer-header">
+            <div class="drawer-tabs">
+                <button class="drawer-tab active" data-drawer-tab="tanks">🚀 TANKS</button>
+                <button class="drawer-tab" data-drawer-tab="engines">⚡ ENGINES</button>
+                <button class="drawer-tab" data-drawer-tab="boosters">🛰️ BOOSTERS</button>
+                <button class="drawer-tab" data-drawer-tab="staging">📊 STAGING</button>
+                <button class="drawer-tab" data-drawer-tab="tech">🔓 TECH</button>
+                <button class="drawer-tab" data-drawer-tab="camera">🎥 CAM</button>
+            </div>
+            <button id="btn-close-drawer" class="btn-close-drawer">✕ CLOSE & FLY 3D</button>
+        </div>
+
+        <div class="drawer-body">
+            <!-- Parts Tab Content -->
+            <div id="tab-content-parts" class="drawer-tab-content active">
+                <h2>SELECT ACTIVE ROCKET COMPONENT UPGRADE</h2>
+                <div id="parts-grid" class="parts-grid"></div>
+            </div>
+
+            <!-- Staging & Stats Tab Content -->
+            <div id="tab-content-staging" class="drawer-tab-content">
+                <div class="drawer-two-col">
+                    <div class="panel">
+                        <h2>EQUIPPED STAGING STACK</h2>
+                        <div id="staging-list" class="staging-list"></div>
+                        <button id="btn-clear-rocket" class="btn-secondary">CLEAR ALL PARTS</button>
+                    </div>
+                    <div class="panel stats-panel">
+                        <h2>VEHICLE PERFORMANCE STATS</h2>
+                        <div class="stat-row"><span>MASS:</span> <span id="stat-mass">0.0</span> t</div>
+                        <div class="stat-row"><span>THRUST:</span> <span id="stat-thrust">0</span> kN</div>
+                        <div class="stat-row"><span>TWR:</span> <span id="stat-twr">0.00</span></div>
+                        <div class="stat-row"><span>DELTA-V:</span> <span id="stat-deltav">0</span> m/s</div>
+                        <div class="stat-row"><span>MAX ALT:</span> <span id="val-max-alt">0</span> m</div>
+                        <div class="stat-row"><span>AIR DENSITY:</span> <span id="val-density">1.225</span> kg/m³</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- R&D Tech Upgrade Tab Content -->
+            <div id="tab-content-tech" class="drawer-tab-content">
+                <h2>R&D TECH TREE UNLOCKS</h2>
+                <div id="tech-list" class="tech-list"></div>
+            </div>
+
+            <!-- Camera & Autopilot Tab Content -->
+            <div id="tab-content-camera" class="drawer-tab-content">
+                <div class="drawer-two-col">
+                    <div class="panel">
+                        <h2>CAMERA ANGLE MODE</h2>
+                        <div class="btn-group vertical">
+                            <button class="cam-btn active" data-cam="chase">CHASE CAM</button>
+                            <button class="cam-btn" data-cam="pad">PAD CAM</button>
+                            <button class="cam-btn" data-cam="cockpit">COCKPIT</button>
+                            <button class="cam-btn" data-cam="orbit">ORBIT CAM</button>
+                        </div>
+                    </div>
+                    <div class="panel">
+                        <h2>AUTOPILOT MODES</h2>
+                        <div class="btn-group vertical">
+                            <button id="btn-auto-single" class="btn-secondary">AUTOPILOT (1 LAUNCH)</button>
+                            <button id="btn-auto-loop" class="btn-secondary">INFINITE LOOP 🔁</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ADMIN PASSCODE MODAL -->
+    <div id="modal-admin-passcode" class="modal-overlay hidden">
+        <div class="modal-card">
+            <h2>🔒 ADMIN SECURITY AUTHENTICATION</h2>
+            <p class="modal-desc">Enter 6-digit security code to unlock command cheats menu:</p>
+            <input type="password" id="input-admin-code" class="modal-input" placeholder="Enter code..." maxlength="6" autofocus>
+            <div id="admin-passcode-error" class="modal-error hidden">INVALID PASSCODE</div>
+            <div class="modal-actions">
+                <button id="btn-submit-passcode" class="btn-primary">AUTHENTICATE</button>
+                <button id="btn-cancel-passcode" class="btn-secondary">CANCEL</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ADMIN CHEATS COMMAND MENU MODAL -->
+    <div id="modal-admin-cheats" class="modal-overlay hidden">
+        <div class="modal-card admin-cheats-card">
+            <h2>⚡ COMMAND & CHEATS MENU</h2>
+            <p class="modal-desc">Access Granted! Unlocked Advanced Controls & Cheats:</p>
+
+            <div class="admin-section">
+                <h3>🚀 SPEED WARP CONTROLS</h3>
+                <div class="admin-warp-group">
+                    <button class="admin-warp-btn active" data-warp="1">1x REALTIME</button>
+                    <button class="admin-warp-btn" data-warp="5">5x WARP</button>
+                    <button class="admin-warp-btn" data-warp="15">15x WARP</button>
+                    <button class="admin-warp-btn" data-warp="42">42x HYPER</button>
+                    <button class="admin-warp-btn" data-warp="100">100x WORMHOLE</button>
+                </div>
+            </div>
+
+            <div class="admin-section">
+                <h3>💰 FINANCIAL CHEATS</h3>
+                <div class="admin-btn-grid">
+                    <button id="btn-cheat-bank-bonus" class="btn-admin-cheat">📈 +11.67% Bank Interest Bonus</button>
+                    <button id="btn-cheat-add-cash" class="btn-admin-cheat">💵 Add +$1,000,000 Cash</button>
+                </div>
+            </div>
+
+            <div class="admin-section">
+                <h3>🔓 R&D & PHYSICS CHEATS</h3>
+                <div class="admin-btn-grid">
+                    <button id="btn-cheat-unlock-tech" class="btn-admin-cheat">🔓 Unlock All R&D Tech</button>
+                    <button id="btn-cheat-max-fuel" class="btn-admin-cheat">⛽ Refill Propellant 100%</button>
+                </div>
+            </div>
+
+            <div id="admin-toast" class="admin-toast hidden">Cheat Activated!</div>
+
+            <div class="modal-actions">
+                <button id="btn-close-admin-cheats" class="btn-secondary">CLOSE MENU</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="./src/main.js"></script>
+</body>
+</html>

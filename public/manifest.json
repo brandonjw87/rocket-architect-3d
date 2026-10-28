@@ -1,0 +1,16 @@
+{
+  "short_name": "RocketArchitect3D",
+  "name": "Rocket Architect 3D - AAA Multiverse Simulator",
+  "icons": [
+    {
+      "src": "favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "orientation": "any",
+  "theme_color": "#080b12",
+  "background_color": "#080b12"
+}
